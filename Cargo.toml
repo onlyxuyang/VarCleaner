@@ -1,0 +1,15 @@
+[package]
+name = "duplicateVarMerge"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.89"
+glob = "0.3.1"
+path-slash = "0.2.1"
+threadpool = "1.8.1"
+walkdir = "2.5.0"
+zip = "2.2.0"
+zip-extensions = "0.8.1"
