@@ -20,6 +20,24 @@ use walkdir::{DirEntry, WalkDir};
 use zip::result::ZipError;
 use zip::write::SimpleFileOptions;
 
+use winapi::um::winuser::{MessageBoxW, MB_OK};
+use std::ptr::null_mut;
+use std::ffi::OsStr;
+use std::os::windows::ffi::OsStrExt;
+
+fn to_wide_string(s: &str) -> Vec<u16> {
+    OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
+}
+
+fn show_message_box(title: &str, message: &str) {
+    let title_wide = to_wide_string(title);
+    let message_wide = to_wide_string(message);
+
+    unsafe {
+        MessageBoxW(null_mut(), message_wide.as_ptr(), title_wide.as_ptr(), MB_OK);
+    }
+}
+
 fn file_op(is_copy:bool, src:&PathBuf, dst:&PathBuf) {
     if !fs::exists(src).unwrap() {
         println!("File {} is not exists, ignore it", src.as_os_str().to_str().unwrap());
@@ -191,7 +209,8 @@ fn unzip_one_file(path:&PathBuf, base:&PathBuf, idx:usize) {
 
 fn main() {
     if !fs::exists("VaM.exe").unwrap() {
-        println!("Please put VarCleaner.exe under VaM folder which includes VaM.exe / 请将VarCleaner.exe放在VaM.exe同级目录下");
+        println!("Please put VarCleaner.exe under VaM folder which includes VaM.exe \n 请将VarCleaner.exe放在VaM.exe同级目录下");
+        show_message_box("Error/错误", "Please put VarCleaner.exe under VaM folder which includes VaM.exe \n 请将VarCleaner.exe放在VaM.exe同级目录下");
         return;
     }
     let vam_folder = env::current_dir().unwrap();
@@ -245,4 +264,5 @@ fn main() {
         fs::remove_dir(&dst_tmp_folder).unwrap();
     }
     println!("Done/完成清理");
+    show_message_box("Success/成功", "Done/完成清理");
 }
