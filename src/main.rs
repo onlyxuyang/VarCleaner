@@ -190,28 +190,34 @@ fn unzip_one_file(path:&PathBuf, base:&PathBuf, idx:usize) {
 }
 
 fn main() {
-    let args:Vec<String> = env::args().collect();
-    let src_folder = &args[1];
-    let dst_folder = &args[2];
-    println!("Searching in {src_folder} and Merging duplicateVar to {dst_folder}");
-
-    let dst_merged_folder = PathBuf::from(dst_folder).join("merged");
-    let dst_backup_folder = PathBuf::from(dst_folder).join("backup");
-    let dst_tmp_folder = PathBuf::from(dst_folder).join("tmp");
+    if !fs::exists("VaM.exe").unwrap() {
+        println!("Please put VarCleaner.exe under VaM folder which includes VaM.exe / 请将VarCleaner.exe放在VaM.exe同级目录下");
+        return;
+    }
+    let vam_folder = env::current_dir().unwrap();
+    let var_folder = vam_folder.join("AddonPackages");
+    let var_merged_folder = PathBuf::from(&var_folder).join("merged");
+    let var_backup_folder = PathBuf::from(&vam_folder).join("VarCleaner/Backup");
+    let dst_tmp_folder = PathBuf::from(&vam_folder).join("VarCleaner/Tmp");
+    let var_folder_str = var_folder.to_string_lossy();
+    let var_merged_folder_str = var_merged_folder.to_string_lossy();
+    let var_backup_folder_str = var_backup_folder.to_string_lossy();
+    println!("VarCleaner will put merged duplicated var to {var_merged_folder_str}, and backup original var at {var_backup_folder_str}");
+    println!("VarCleaner 将清理过的重复Var放在{var_merged_folder_str}, 并将原始Var备份在{var_backup_folder_str}");
 
     let hpool = ThreadPool::new(12);
-    let file_dicts = generate_duplicate_var_files(src_folder).unwrap();
+    let file_dicts = generate_duplicate_var_files(&var_folder_str.to_string()).unwrap();
     for (filename, filelist) in file_dicts.iter() {
         let dst_tmp_folder_clone = dst_tmp_folder.clone();
-        let dst_merged_folder_clone = dst_merged_folder.clone();
-        let dst_backup_folder_clone = dst_backup_folder.clone();
+        let dst_merged_folder_clone = var_merged_folder.clone();
+        let dst_backup_folder_clone = var_backup_folder.clone();
         let filename_clone = filename.clone();
         let poolsize = filelist.len();
-        let src_folder_clone = src_folder.clone();
+        let src_folder_clone = var_folder.clone();
         let filelist_clone = filelist.clone();
         hpool.execute(move || {
             if filelist_clone.len() > 1 {
-                println!("Process file {}", filename_clone);
+                println!("Process file {} Count {}", filename_clone, filelist_clone.len());
                 let pool = ThreadPool::new(poolsize);
                 let var_tmp_folder = dst_tmp_folder_clone.join(PathBuf::from(&filename_clone));
                 let dst_backup_folder_clone_clone = dst_backup_folder_clone.clone();
@@ -235,4 +241,8 @@ fn main() {
         });
     }
     hpool.join();
+    if fs::exists(&dst_tmp_folder).unwrap() {
+        fs::remove_dir(&dst_tmp_folder).unwrap();
+    }
+    println!("Done/完成清理");
 }
