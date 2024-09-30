@@ -48,13 +48,6 @@ fn show_message_box(title: &str, message: &str) {
 }
 
 fn file_op(is_copy: bool, src: &PathBuf, dst: &PathBuf) {
-    if !fs::exists(src).unwrap() {
-        println!(
-            "File {} is not exists, ignore it",
-            src.as_os_str().to_str().unwrap()
-        );
-        return;
-    }
     fs::create_dir_all(dst.parent().unwrap()).unwrap();
     if is_copy {
         let mut file = fs::File::open(src).unwrap();
@@ -74,6 +67,9 @@ fn generate_duplicate_var_files(
     {
         match entry {
             Ok(path) => {
+                if !path.is_file() {
+                    continue;
+                }
                 let filename = String::from(path.file_name().unwrap().to_str().unwrap());
                 if !result.contains_key(&filename) {
                     result.insert(filename.clone(), LinkedList::new());
@@ -139,6 +135,10 @@ fn zip_one_file(
     method: zip::CompressionMethod,
 ) -> anyhow::Result<()> {
     if !Path::new(src_dir).is_dir() {
+        println!(
+            "Path {} is not directory, error.",
+            src_dir.as_os_str().to_str().unwrap()
+        );
         return Err(ZipError::FileNotFound.into());
     }
     fs::create_dir_all(dst_file.parent().unwrap()).unwrap();
@@ -182,6 +182,11 @@ fn rezip_one_file(src: &PathBuf, target: &PathBuf) {
             Err(_) => panic!(),
         }
     }
+    // If all duplicated var files are invalid, no file can be compress, just leave it
+    if result.len() == 0 {
+        return;
+    }
+
     let workdir = src.join("working");
     for (short_name, (path, _)) in result.iter() {
         let filepath = workdir.join(short_name);
@@ -275,14 +280,16 @@ fn main() {
                             });
                         }
                     });
-                    rezip_one_file(&var_tmp_folder, &var_merged_folder.join(&filename_clone));
-                    fs::remove_dir_all(&var_tmp_folder).unwrap();
+                    if fs::exists(var_tmp_folder).unwrap() {
+                        rezip_one_file(&var_tmp_folder, &var_merged_folder.join(&filename_clone));
+                        fs::remove_dir_all(&var_tmp_folder).unwrap();
+                    }
                 }
             });
         }
     });
     if fs::exists(&dst_tmp_folder).unwrap() {
-        fs::remove_dir(&dst_tmp_folder).unwrap();
+        fs::remove_dir_all(&dst_tmp_folder).unwrap();
     }
     println!("Done/完成清理");
     show_message_box("Success/成功", "Done/完成清理");
